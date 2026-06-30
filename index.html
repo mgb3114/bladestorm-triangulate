@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en-AU">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description"
+        content="bs-triangulate is a lightweight browser-based OpenStreetMap triangulation tool for range, bearing and circle measurements.">
+    <title>bs-triangulate</title>
+
+    <!-- Leaflet provides the OpenStreetMap rendering and map primitives. -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQ1JQ9rZ4P4x5cXl5H6rj6cX7m54j6k=" crossorigin="">
+
+    <!-- Application-specific layout and measurement styling. -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="app" class="app sidebar-expanded">
+        <header class="toolbar" aria-label="Application toolbar">
+            <div class="toolbar-group app-title-group">
+                <span class="app-title">bs-triangulate</span>
+            </div>
+
+            <div class="toolbar-group file-menu-group">
+                <button id="file-menu-button" class="toolbar-button" type="button" aria-haspopup="true"
+                    aria-expanded="false">
+                    File
+                </button>
+                <div id="file-menu" class="file-menu is-hidden" role="menu" aria-label="File menu">
+                    <button id="new-project" type="button" role="menuitem">New <span
+                            class="shortcut">Ctrl+N</span></button>
+                    <button id="open-project" type="button" role="menuitem">Open JSON <span
+                            class="shortcut">Ctrl+O</span></button>
+                    <button id="save-project" type="button" role="menuitem">Save JSON <span
+                            class="shortcut">Ctrl+S</span></button>
+                </div>
+                <input id="open-file-input" class="visually-hidden" type="file" accept="application/json,.json">
+            </div>
+
+            <div class="toolbar-group">
+                <button id="sidebar-toggle" class="toolbar-button" type="button">Collapse Sidebar</button>
+            </div>
+
+            <nav class="toolbar-group mode-group" aria-label="Drawing modes">
+                <button id="mode-select" class="toolbar-button" type="button">Select <span
+                        class="shortcut">Esc</span></button>
+                <button id="mode-line" class="toolbar-button" type="button">Measure Line <span
+                        class="shortcut">L</span></button>
+                <button id="mode-circle" class="toolbar-button" type="button">Draw Circle <span
+                        class="shortcut">C</span></button>
+            </nav>
+
+            <label class="toolbar-group units-group" for="units-select">
+                <span>Units</span>
+                <select id="units-select" class="toolbar-select">
+                    <option value="m">metres</option>
+                    <option value="km" selected>kilometres</option>
+                    <option value="nm">nautical miles</option>
+                    <option value="mi">statute miles</option>
+                    <option value="ft">feet</option>
+                </select>
+            </label>
+
+            <div class="toolbar-spacer" aria-hidden="true"></div>
+
+            <div class="toolbar-group status-group" aria-live="polite">
+                <span id="status" class="status-text">Select mode.</span>
+            </div>
+
+            <div class="toolbar-group">
+                <button id="fullscreen-toggle" class="toolbar-button" type="button">Fullscreen</button>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <aside id="sidebar" class="sidebar" aria-label="Measurement controls">
+                <section id="properties-accordion" class="accordion properties-accordion is-open">
+                    <button id="properties-header" class="accordion-header" type="button"
+                        aria-controls="properties-body">
+                        <span class="accordion-title">Properties</span>
+                        <span class="accordion-indicator" aria-hidden="true">▾</span>
+                    </button>
+                    <div id="properties-body" class="accordion-body properties-body">
+                        <p class="empty-state">No object selected.</p>
+                    </div>
+                </section>
+
+                <section id="objects-accordion" class="accordion objects-accordion is-open">
+                    <button id="objects-header" class="accordion-header" type="button" aria-controls="objects-body">
+                        <span class="accordion-title">Objects</span>
+                        <span class="accordion-indicator" aria-hidden="true">▾</span>
+                    </button>
+                    <div id="objects-body" class="accordion-body objects-body">
+                        <p class="empty-state">No objects yet.</p>
+                    </div>
+                </section>
+            </aside>
+
+            <section class="map-shell" aria-label="Map workspace">
+                <div id="map" class="map"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Leaflet must load before app.js because the app uses the global L object. -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
