@@ -240,19 +240,15 @@ a {
    ================================ */
 .workspace {
     display: grid;
-    grid-template-columns: var(--sidebar-width-expanded) 1fr;
-    height: 1fr;
-    min-height: 0;
+    grid-template-columns: var(--sidebar-width-expanded) minmax(0, 1fr);
     flex: 1 1 auto;
-    background: var(--color-bg);
-    height: calc(100vh - var(--toolbar-height));
-    width: 100vw;
+    min-height: 0;
+    width: 100%;
     overflow: hidden;
-    transition: grid-template-columns 0.2s cubic-bezier(.77, 0, .18, 1);
 }
 
 .app.sidebar-collapsed .workspace {
-    grid-template-columns: var(--sidebar-width-collapsed) 1fr;
+    grid-template-columns: var(--sidebar-width-collapsed) minmax(0, 1fr);
 }
 
 /* ================================
@@ -623,4 +619,56 @@ a {
 ::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 6px;
+}
+
+/* ==========================================================================
+   User Location
+   ========================================================================== */
+
+/*
+ * Custom Leaflet "Locate Me" control.
+ *
+ * Styled to closely match the native Leaflet zoom controls.
+ */
+.leaflet-control-locate button.locate-control-button {
+    display: block;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: #ffffff;
+    color: #222;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.leaflet-control-locate button.locate-control-button:hover {
+    background: #f4f4f4;
+}
+
+.leaflet-control-locate button.locate-control-button:focus {
+    background: #e8f1ff;
+    outline: none;
+}
+
+/*
+ * Blue user-location marker.
+ */
+.bs-user-location-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bs-user-location-marker span {
+    width: 14px;
+    height: 14px;
+    display: block;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
 }

@@ -20,6 +20,7 @@ const STORAGE_KEY = 'bs-triangulate-project';
 const DEFAULT_MAP_CENTER = [-25.2744, 133.7751];
 const DEFAULT_MAP_ZOOM = 4;
 const GEOLOCATION_ZOOM = 12;
+const LOCATE_ZOOM = 15;
 
 const MODE_SELECT = 'select';
 const MODE_DRAW_LINE = 'draw-line';
@@ -85,6 +86,9 @@ let hasLoadedSavedProject = false;
 
 const leafletLayers = new Map();
 const elements = {};
+
+let userLocationMarker = null;
+let userLocationAccuracyCircle = null;
 
 let lastClickCycle = {
     point: null,
@@ -309,6 +313,8 @@ function initialiseMap() {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+    invalidateMapSizeSoon();
+    addLocateControl();
 
     map.on('click', handleMapClick);
     map.on('mousemove', handleMapMouseMove);
@@ -345,6 +351,185 @@ function initialiseMapFromGeolocation() {
             maximumAge: 600000
         }
     );
+}
+
+/**
+ * Adds a lightweight Leaflet-style control for centring on the user's location.
+ *
+ * This avoids pulling in a locate-control plugin while still giving the map a
+ * conventional native control. The control performs a one-shot geolocation
+ * lookup rather than continuously tracking the user.
+ *
+ * @returns {void}
+ */
+function addLocateControl() {
+    if (!map || typeof L === 'undefined') {
+        return;
+    }
+
+    const LocateControl = L.Control.extend({
+        options: {
+            position: 'topleft'
+        },
+
+        onAdd() {
+            const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-locate');
+            const button = L.DomUtil.create('button', 'locate-control-button', container);
+
+            button.type = 'button';
+            button.title = 'Centre on current location';
+            button.setAttribute('aria-label', 'Centre on current location');
+            button.textContent = '◎';
+
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.disableScrollPropagation(container);
+            L.DomEvent.on(button, 'click', handleLocateControlClick);
+
+            return container;
+        }
+    });
+
+    map.addControl(new LocateControl());
+}
+
+/**
+ * Handles clicks on the custom locate control.
+ *
+ * @param {Event} event - Click event.
+ * @returns {void}
+ */
+function handleLocateControlClick(event) {
+    if (event) {
+        L.DomEvent.stop(event);
+    }
+
+    locateAndCentreMap();
+}
+
+/**
+ * Requests the browser's current position and centres the map on success.
+ *
+ * This is intentionally a one-shot location request. It does not watch the
+ * user's location or keep the map following them.
+ *
+ * @returns {void}
+ */
+function locateAndCentreMap() {
+    if (!navigator.geolocation || !map) {
+        setStatus('Geolocation is not available in this browser.');
+        return;
+    }
+
+    setStatus('Locating current position...');
+
+    navigator.geolocation.getCurrentPosition(
+        handleLocateSuccess,
+        handleLocateFailure,
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 30000
+        }
+    );
+}
+
+/**
+ * Centres the map and updates the visible user-location marker.
+ *
+ * @param {GeolocationPosition} position - Browser geolocation result.
+ * @returns {void}
+ */
+function handleLocateSuccess(position) {
+    const point = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+    };
+    const accuracyMeters = Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : 0;
+    const targetZoom = Math.max(map.getZoom(), LOCATE_ZOOM);
+
+    updateUserLocationLayers(point, accuracyMeters);
+    map.setView(pointToLatLng(point), targetZoom);
+    setStatus(`Centred on current location. Accuracy ±${Math.round(accuracyMeters)} m.`);
+}
+
+/**
+ * Reports a browser geolocation failure in the status bar.
+ *
+ * @param {GeolocationPositionError} error - Browser geolocation error.
+ * @returns {void}
+ */
+function handleLocateFailure(error) {
+    if (error.code === error.PERMISSION_DENIED) {
+        setStatus('Location permission denied.');
+        return;
+    }
+
+    if (error.code === error.TIMEOUT) {
+        setStatus('Location request timed out.');
+        return;
+    }
+
+    setStatus('Could not determine current location.');
+}
+
+/**
+ * Creates or updates the marker and accuracy circle for the user's location.
+ *
+ * @param {{lat: number, lng: number}} point - Current location coordinate.
+ * @param {number} accuracyMeters - Browser-reported accuracy radius in metres.
+ * @returns {void}
+ */
+function updateUserLocationLayers(point, accuracyMeters) {
+    const latLng = pointToLatLng(point);
+
+    if (!userLocationMarker) {
+        userLocationMarker = L.marker(latLng, {
+            interactive: false,
+            icon: createUserLocationIcon(),
+            keyboard: false,
+            zIndexOffset: 1000
+        }).addTo(map);
+    } else {
+        userLocationMarker.setLatLng(latLng);
+    }
+
+    if (!userLocationAccuracyCircle) {
+        userLocationAccuracyCircle = L.circle(latLng, getUserLocationAccuracyStyle()).addTo(map);
+    } else {
+        userLocationAccuracyCircle.setLatLng(latLng);
+    }
+
+    userLocationAccuracyCircle.setRadius(Math.max(accuracyMeters, 1));
+}
+
+/**
+ * Creates the blue dot icon used for the user's current location.
+ *
+ * @returns {L.DivIcon} Leaflet div icon.
+ */
+function createUserLocationIcon() {
+    return L.divIcon({
+        className: 'bs-user-location-marker',
+        html: '<span></span>',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
+    });
+}
+
+/**
+ * Returns the style for the browser-reported location accuracy circle.
+ *
+ * @returns {Object} Leaflet circle style.
+ */
+function getUserLocationAccuracyStyle() {
+    return {
+        color: '#2563eb',
+        weight: 1,
+        opacity: 0.45,
+        fillColor: '#2563eb',
+        fillOpacity: 0.12,
+        interactive: false
+    };
 }
 
 /**
@@ -836,8 +1021,8 @@ function createLineLayerBundle(line) {
         selectObject(line.id);
     });
 
-    startMarker.on('drag', (event) => updateLineEndpoint(line.id, 'start', latLngToPoint(event.target.getLatLng())));
-    endMarker.on('drag', (event) => updateLineEndpoint(line.id, 'end', latLngToPoint(event.target.getLatLng())));
+    startMarker.on('drag', (event) => updateLineEndpoint(line.id, 'start', latLngToPoint(event.target.getLatLng()), true));
+    endMarker.on('drag', (event) => updateLineEndpoint(line.id, 'end', latLngToPoint(event.target.getLatLng()), true));
     startMarker.on('dragend', persistAndRender);
     endMarker.on('dragend', persistAndRender);
 
@@ -853,21 +1038,57 @@ function createLineLayerBundle(line) {
 /**
  * Updates a line endpoint in the project model.
  *
+ * During live marker dragging we avoid a full render because replacing a
+ * Leaflet marker icon mid-drag interrupts Leaflet's drag interaction. Instead,
+ * we update only the dependent line and label geometry, then do a full render on
+ * dragend.
+ *
  * @param {string} lineId - Line object ID.
  * @param {'start'|'end'} endpoint - Endpoint to update.
  * @param {{lat: number, lng: number}} point - New coordinate.
+ * @param {boolean} liveDrag - Whether this update is happening during marker drag.
  * @returns {void}
  */
-function updateLineEndpoint(lineId, endpoint, point) {
+function updateLineEndpoint(lineId, endpoint, point, liveDrag = false) {
     const line = findObjectById(lineId);
     if (!line || line.type !== OBJECT_TYPE_LINE) {
         return;
     }
 
     line[endpoint] = { ...point };
+
+    if (liveDrag) {
+        updateLineLiveDragVisuals(line);
+        return;
+    }
+
     renderObject(line);
     renderObjectList();
     renderPropertiesPanel();
+}
+
+/**
+ * Updates line visuals during marker dragging without replacing marker icons.
+ *
+ * Leaflet's marker drag implementation is sensitive to the marker DOM being
+ * replaced mid-drag. This function updates only the polyline and measurement
+ * label, leaving the actively dragged marker untouched until dragend.
+ *
+ * @param {Object} line - Line object being dragged.
+ * @returns {void}
+ */
+function updateLineLiveDragVisuals(line) {
+    const bundle = leafletLayers.get(line.id);
+    if (!bundle) {
+        return;
+    }
+
+    const startLatLng = pointToLatLng(line.start);
+    const endLatLng = pointToLatLng(line.end);
+
+    bundle.line.setLatLngs([startLatLng, endLatLng]);
+    bundle.label.setLatLng(getLineMidpointLatLng(line));
+    bundle.label.setIcon(createLabelIcon(getLineLabelText(line), line.id === selectedObjectId));
 }
 
 /**
@@ -1050,9 +1271,9 @@ function createCircleLayerBundle(circle) {
         selectObject(circle.id);
     });
 
-    centerMarker.on('drag', (event) => updateCircleCenter(circle.id, latLngToPoint(event.target.getLatLng())));
+    centerMarker.on('drag', (event) => updateCircleCenter(circle.id, latLngToPoint(event.target.getLatLng()), true));
     centerMarker.on('dragend', persistAndRender);
-    radiusHandle.on('drag', (event) => updateCircleRadiusFromHandle(circle.id, latLngToPoint(event.target.getLatLng())));
+    radiusHandle.on('drag', (event) => updateCircleRadiusFromHandle(circle.id, latLngToPoint(event.target.getLatLng()), true));
     radiusHandle.on('dragend', persistAndRender);
 
     return {
@@ -1067,17 +1288,28 @@ function createCircleLayerBundle(circle) {
 /**
  * Updates a circle centre coordinate.
  *
+ * During live marker dragging we avoid a full render because replacing marker
+ * icons mid-drag interrupts Leaflet's drag interaction. A full render happens on
+ * dragend.
+ *
  * @param {string} circleId - Circle object ID.
  * @param {{lat: number, lng: number}} point - New centre coordinate.
+ * @param {boolean} liveDrag - Whether this update is happening during marker drag.
  * @returns {void}
  */
-function updateCircleCenter(circleId, point) {
+function updateCircleCenter(circleId, point, liveDrag = false) {
     const circle = findObjectById(circleId);
     if (!circle || circle.type !== OBJECT_TYPE_CIRCLE) {
         return;
     }
 
     circle.center = { ...point };
+
+    if (liveDrag) {
+        updateCircleLiveDragVisuals(circle, true);
+        return;
+    }
+
     renderObject(circle);
     renderObjectList();
     renderPropertiesPanel();
@@ -1086,20 +1318,56 @@ function updateCircleCenter(circleId, point) {
 /**
  * Updates a circle radius from a dragged radius handle.
  *
+ * During live marker dragging we update only dependent circle geometry and defer
+ * the full render until dragend.
+ *
  * @param {string} circleId - Circle object ID.
  * @param {{lat: number, lng: number}} handlePoint - Radius handle coordinate.
+ * @param {boolean} liveDrag - Whether this update is happening during marker drag.
  * @returns {void}
  */
-function updateCircleRadiusFromHandle(circleId, handlePoint) {
+function updateCircleRadiusFromHandle(circleId, handlePoint, liveDrag = false) {
     const circle = findObjectById(circleId);
     if (!circle || circle.type !== OBJECT_TYPE_CIRCLE) {
         return;
     }
 
     circle.radiusMeters = calculateDistanceMeters(circle.center, handlePoint);
+
+    if (liveDrag) {
+        updateCircleLiveDragVisuals(circle, false);
+        return;
+    }
+
     renderObject(circle);
     renderObjectList();
     renderPropertiesPanel();
+}
+
+/**
+ * Updates circle visuals during marker dragging without replacing marker icons.
+ *
+ * @param {Object} circle - Circle object being dragged.
+ * @param {boolean} moveRadiusHandle - Whether to reposition the radius handle.
+ * @returns {void}
+ */
+function updateCircleLiveDragVisuals(circle, moveRadiusHandle) {
+    const bundle = leafletLayers.get(circle.id);
+    if (!bundle) {
+        return;
+    }
+
+    const centerLatLng = pointToLatLng(circle.center);
+    const handleLatLng = pointToLatLng(calculateDestinationPoint(circle.center, 90, circle.radiusMeters));
+
+    bundle.circle.setLatLng(centerLatLng);
+    bundle.circle.setRadius(circle.radiusMeters);
+    bundle.label.setLatLng(handleLatLng);
+    bundle.label.setIcon(createLabelIcon(getCircleLabelText(circle), circle.id === selectedObjectId));
+
+    if (moveRadiusHandle) {
+        bundle.radiusHandle.setLatLng(handleLatLng);
+    }
 }
 
 /**
