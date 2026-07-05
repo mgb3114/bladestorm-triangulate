@@ -96,6 +96,10 @@ let lastClickCycle = {
     index: -1
 };
 
+// Leaflet native base layer support
+let baseLayers = {};
+let layerControl = null;
+
 // =============================================================================
 // Startup
 // =============================================================================
@@ -110,8 +114,9 @@ let lastClickCycle = {
  */
 function bootApplication() {
     cacheDomElements();
-    project = loadProjectFromLocalStorage() || createEmptyProject();
-    hasLoadedSavedProject = Boolean(loadProjectFromLocalStorage());
+    const savedProject = loadProjectFromLocalStorage();
+    project = savedProject || createEmptyProject();
+    hasLoadedSavedProject = Boolean(savedProject);
 
     normaliseLoadedProject(project);
     selectedObjectId = project.selectedObjectId || null;
@@ -180,7 +185,8 @@ function createEmptyProject() {
         units: 'km',
         map: {
             center: [...DEFAULT_MAP_CENTER],
-            zoom: DEFAULT_MAP_ZOOM
+            zoom: DEFAULT_MAP_ZOOM,
+            baseLayer: 'osm'
         },
         ui: {
             sidebarCollapsed: false,
@@ -212,6 +218,13 @@ function normaliseLoadedProject(loadedProject) {
     loadedProject.map = loadedProject.map || { center: [...DEFAULT_MAP_CENTER], zoom: DEFAULT_MAP_ZOOM };
     loadedProject.map.center = Array.isArray(loadedProject.map.center) ? loadedProject.map.center : [...DEFAULT_MAP_CENTER];
     loadedProject.map.zoom = Number.isFinite(loadedProject.map.zoom) ? loadedProject.map.zoom : DEFAULT_MAP_ZOOM;
+    // Normalise baseLayer to one of 'osm', 'satellite', 'topo', default 'osm'
+    const allowedBaseLayers = ['osm', 'satellite', 'topo'];
+    let baseLayerKey = loadedProject.map.baseLayer;
+    if (!allowedBaseLayers.includes(baseLayerKey)) {
+        baseLayerKey = 'osm';
+    }
+    loadedProject.map.baseLayer = baseLayerKey;
     loadedProject.ui = loadedProject.ui || {};
     loadedProject.ui.sidebarCollapsed = Boolean(loadedProject.ui.sidebarCollapsed);
     loadedProject.ui.propertiesExpanded = loadedProject.ui.propertiesExpanded !== false;
@@ -309,16 +322,79 @@ function initialiseMap() {
         preferCanvas: true
     }).setView(project.map.center, project.map.zoom);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    // Setup base layers
+    baseLayers = getConfiguredBaseLayers();
+    const allowedBaseLayers = ['osm', 'satellite', 'topo'];
+    let initialBaseLayerKey = project.map.baseLayer;
+    if (!allowedBaseLayers.includes(initialBaseLayerKey)) {
+        initialBaseLayerKey = 'osm';
+    }
+    // Add only the saved base layer to the map
+    baseLayers[initialBaseLayerKey].addTo(map);
+
+    // Create native L.control.layers
+    const baseLayerLabels = {
+        'osm': 'OpenStreetMap',
+        'satellite': 'Satellite',
+        'topo': 'Topographic'
+    };
+    const layersForControl = {};
+    for (const key of allowedBaseLayers) {
+        layersForControl[baseLayerLabels[key]] = baseLayers[key];
+    }
+    layerControl = L.control.layers(layersForControl, null, { position: 'topright', collapsed: true }).addTo(map);
+
+    // Listen for base layer changes
+    map.on('baselayerchange', function (e) {
+        const key = resolveBaseLayerKey(e.layer);
+        project.map.baseLayer = key;
+        persistProject();
+    });
+
     invalidateMapSizeSoon();
     addLocateControl();
 
     map.on('click', handleMapClick);
     map.on('mousemove', handleMapMouseMove);
     map.on('moveend zoomend', handleMapViewChanged);
+}
+
+/**
+ * Returns an object with configured Leaflet tile layers for the three supported base layers.
+ * @returns {{osm: L.TileLayer, satellite: L.TileLayer, topo: L.TileLayer}}
+ */
+function getConfiguredBaseLayers() {
+    // OpenStreetMap Standard
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    });
+    // Esri World Imagery
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    });
+    // OpenTopoMap
+    const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
+        attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)'
+    });
+    return { osm, satellite, topo };
+}
+
+/**
+ * Resolves the base layer key ('osm', 'satellite', or 'topo') from a given Leaflet tile layer instance.
+ * Returns 'osm' as a fallback.
+ * @param {L.TileLayer} layer
+ * @returns {'osm'|'satellite'|'topo'}
+ */
+function resolveBaseLayerKey(layer) {
+    for (const key of ['osm', 'satellite', 'topo']) {
+        if (baseLayers[key] === layer) {
+            return key;
+        }
+    }
+    return 'osm';
 }
 
 /**
@@ -379,7 +455,7 @@ function addLocateControl() {
             button.type = 'button';
             button.title = 'Centre on current location';
             button.setAttribute('aria-label', 'Centre on current location');
-            button.textContent = '◎';
+            button.innerHTML = '<i class="ph ph-navigation-arrow" aria-hidden="true"></i>';
 
             L.DomEvent.disableClickPropagation(container);
             L.DomEvent.disableScrollPropagation(container);
@@ -741,7 +817,17 @@ function updateFullscreenButtonLabel() {
         return;
     }
 
-    elements.fullscreenButton.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+    const icon = document.fullscreenElement
+        ? 'ph-corners-in'
+        : 'ph-corners-out';
+    const label = document.fullscreenElement
+        ? 'Exit Fullscreen'
+        : 'Fullscreen';
+
+    elements.fullscreenButton.innerHTML = `
+        <i class="ph ${icon}" aria-hidden="true"></i>
+        <span>${label}</span>
+    `;
 }
 
 // =============================================================================
@@ -784,7 +870,18 @@ function applySidebarState() {
     elements.app.classList.toggle(SIDEBAR_EXPANDED_CLASS, !project.ui.sidebarCollapsed);
 
     if (elements.sidebarToggleButton) {
-        elements.sidebarToggleButton.textContent = project.ui.sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
+        const icon = project.ui.sidebarCollapsed
+            ? 'ph-sidebar-simple'
+            : 'ph-sidebar-simple';
+        const title = project.ui.sidebarCollapsed
+            ? 'Expand sidebar'
+            : 'Collapse sidebar';
+
+        elements.sidebarToggleButton.title = title;
+        elements.sidebarToggleButton.setAttribute('aria-label', title);
+        elements.sidebarToggleButton.innerHTML = `
+            <i class="ph ${icon}" aria-hidden="true"></i>
+        `;
     }
 }
 
@@ -1676,6 +1773,25 @@ function createLabelIcon(html, selected) {
 }
 
 /**
+ * Saves the current project state.
+ *
+ * @returns {void}
+ */
+function persistProject() {
+    saveProjectToLocalStorage();
+}
+
+/**
+ * Refreshes the sidebar UI for the currently selected object.
+ *
+ * @returns {void}
+ */
+function refreshSelectionUi() {
+    renderObjectList();
+    renderPropertiesPanel();
+}
+
+/**
  * Persists and refreshes the full UI.
  *
  * @returns {void}
@@ -1684,7 +1800,7 @@ function persistAndRender() {
     renderAllObjects();
     renderObjectList();
     renderPropertiesPanel();
-    saveProjectToLocalStorage();
+    persistProject();
 }
 
 // =============================================================================
@@ -1956,9 +2072,12 @@ function renderObjectList() {
  */
 function renderObjectListItem(object) {
     const selected = object.id === selectedObjectId;
+    const iconClass = object.type === OBJECT_TYPE_LINE
+        ? 'ph-ruler'
+        : 'ph-circle';
     return `
         <button type="button" class="object-list-item ${selected ? SELECTED_CLASS : ''}" data-object-id="${escapeHtml(object.id)}">
-            <span class="object-name">${escapeHtml(object.name)}</span>
+            <span class="object-name"><i class="ph ${iconClass}" aria-hidden="true"></i> ${escapeHtml(object.name)}</span>
             <span class="object-summary">${escapeHtml(getObjectSummary(object))}</span>
         </button>
     `;

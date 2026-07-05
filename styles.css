@@ -1,84 +1,69 @@
 /*
- * bs-triangulate Desktop Layout Stylesheet
- * ----------------------------------------
- * Implements the full desktop layout for the bladestorm-triangulate app.
- * Includes CSS custom properties, modern resets, flex/grid layouts,
- * sidebar expand/collapse, toolbar, workspace, sidebar accordions,
- * map area, property forms, object lists, custom Leaflet icons,
- * utility classes, and responsive adjustments.
- *
- * No external dependencies or frameworks required.
+ * bs-triangulate stylesheet
+ * -------------------------
+ * Desktop-first layout and interaction styling for the Leaflet measurement app.
+ * The page itself never scrolls; the map owns the main workspace and the sidebar
+ * scrolls internally where required.
  */
 
-/* ================================
-   CSS Custom Properties
-   ================================ */
+/* =============================================================================
+   Design tokens
+   ============================================================================= */
+
 :root {
-    /* Colors */
     --color-bg: #f8f9fb;
-    --color-bg-alt: #ffffff;
-    --color-bg-toolbar: #f4f5f8;
-    --color-bg-sidebar: #f6f7fa;
+    --color-surface: #ffffff;
+    --color-toolbar: #f4f5f8;
+    --color-sidebar: #f6f7fa;
     --color-border: #d3d7e0;
-    --color-border-strong: #b7bbc6;
+    --color-border-strong: #aeb5c4;
+    --color-text: #232940;
+    --color-text-muted: #737b92;
+    --color-text-inverse: #ffffff;
     --color-primary: #2263cf;
     --color-primary-dark: #1a4ea7;
-    --color-accent: #e9f0fe;
-    --color-danger: #e74c3c;
-    --color-danger-bg: #fbeaea;
-    --color-success: #27ae60;
-    --color-warning: #f39c12;
-    --color-neutral: #949cae;
-    --color-shadow: rgba(60, 80, 120, 0.06);
-    --color-shadow-strong: rgba(60, 80, 120, 0.15);
+    --color-primary-soft: #e9f0fe;
+    --color-danger: #d64545;
+    --color-danger-soft: #fbeaea;
     --color-marker-green: #27ae60;
     --color-marker-red: #e74c3c;
     --color-marker-neutral: #b7bbc6;
-    --color-marker-outline: #334a78;
-    --color-marker-outline-selected: #1a4ea7;
-    --color-text: #232940;
-    --color-text-muted: #79809a;
-    --color-text-inverse: #fff;
-    --color-menu-bg: #fff;
-    --color-menu-border: #d3d7e0;
-    --color-menu-hover: #f3f5fa;
+    --color-shadow: rgba(35, 41, 64, 0.08);
+    --color-shadow-strong: rgba(35, 41, 64, 0.18);
 
-    /* Spacing & Sizing */
     --space-xxs: 2px;
     --space-xs: 4px;
     --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-xxl: 48px;
-    --radius: 7px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+
     --radius-sm: 4px;
+    --radius-md: 7px;
+
+    --toolbar-height: 48px;
     --sidebar-width-expanded: 340px;
     --sidebar-width-collapsed: 48px;
-    --toolbar-height: 48px;
-    --properties-section-height: 360px;
+    --properties-body-height: 360px;
     --accordion-header-height: 40px;
-    --object-list-item-height: 44px;
-    --object-list-item-radius: 5px;
 
-    /* Fonts */
-    --font-family: 'Inter', system-ui, sans-serif;
-    --font-size-base: 15px;
-    --font-size-sm: 13px;
-    --font-size-lg: 18px;
-    --font-weight-bold: 600;
+    --font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-size-base: 14px;
+    --font-size-sm: 12px;
+    --font-size-lg: 17px;
+    --font-weight-semibold: 600;
 }
 
-/* Responsive Sidebar Width */
 @media (max-width: 900px) {
     :root {
-        --sidebar-width-expanded: 220px;
+        --sidebar-width-expanded: 260px;
     }
 }
 
-/* ================================
-   Modern CSS Reset
-   ================================ */
+/* =============================================================================
+   Reset and page shell
+   ============================================================================= */
+
 *,
 *::before,
 *::after {
@@ -87,21 +72,19 @@
 
 html,
 body {
+    width: 100%;
     height: 100%;
     margin: 0;
     padding: 0;
 }
 
 body {
+    overflow: hidden;
+    background: var(--color-bg);
+    color: var(--color-text);
     font-family: var(--font-family);
     font-size: var(--font-size-base);
-    color: var(--color-text);
-    background: var(--color-bg);
-    line-height: 1.6;
-    min-height: 100%;
-    height: 100vh;
-    overflow: hidden;
-    /* Prevent scrolling outside app */
+    line-height: 1.4;
 }
 
 button,
@@ -109,135 +92,155 @@ input,
 select,
 textarea {
     font: inherit;
-    color: inherit;
-    background: none;
-    border: none;
-    outline: none;
-    padding: 0;
-    margin: 0;
 }
 
 button {
     cursor: pointer;
-    background: none;
 }
 
-a {
-    color: var(--color-primary);
-    text-decoration: none;
-}
-
-/* ================================
-   App Layout
-   ================================ */
 .app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
     width: 100vw;
+    height: 100vh;
     overflow: hidden;
-    background: var(--color-bg);
 }
 
-/* ================================
+/* =============================================================================
    Toolbar
-   ================================ */
+   ============================================================================= */
+
 .toolbar {
     display: flex;
     align-items: center;
-    height: var(--toolbar-height);
+    gap: var(--space-md);
+    flex: 0 0 var(--toolbar-height);
     min-height: var(--toolbar-height);
     padding: 0 var(--space-lg);
-    background: var(--color-bg-toolbar);
+    background: var(--color-toolbar);
     border-bottom: 1px solid var(--color-border);
-    box-shadow: 0 1px 0 var(--color-shadow);
-    gap: var(--space-md);
-    z-index: 10;
     position: relative;
+    z-index: 1000;
 }
 
 .toolbar-group {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
+    min-width: 0;
 }
 
 .toolbar-spacer {
     flex: 1 1 auto;
 }
 
+.app-title {
+    color: var(--color-primary-dark);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.toolbar-button,
+.toolbar-select {
+    height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
 .toolbar-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 32px;
-    min-width: 32px;
-    padding: 0 var(--space-md);
-    background: var(--color-bg-alt);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-base);
-    transition: background 0.13s, border-color 0.13s, color 0.13s;
-    position: relative;
     gap: var(--space-xs);
-}
-
-.toolbar-button:active,
-.toolbar-button:focus {
-    border-color: var(--color-primary);
-    background: var(--color-accent);
-}
-
-.toolbar-button[aria-pressed="true"],
-.toolbar-button.selected {
-    background: var(--color-accent);
-    color: var(--color-primary-dark);
-    border-color: var(--color-primary);
+    padding: 0 var(--space-md);
 }
 
 .toolbar-select {
-    height: 32px;
-    min-width: 90px;
+    min-width: 120px;
     padding: 0 var(--space-sm);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-alt);
-    color: var(--color-text);
-    font-size: var(--font-size-base);
+}
+
+.toolbar-button:hover,
+.toolbar-button:focus,
+.toolbar-select:hover,
+.toolbar-select:focus {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+}
+
+/* app.js toggles .is-active on mode buttons. */
+.toolbar-button.is-active,
+.toolbar-button[aria-pressed="true"] {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-dark);
 }
 
 .shortcut {
-    background: var(--color-bg);
-    color: var(--color-text-muted);
+    display: inline-flex;
+    align-items: center;
+    min-height: 18px;
+    padding: 0 var(--space-xs);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-text-muted);
     font-size: var(--font-size-sm);
-    padding: 0 var(--space-xs);
-    margin-left: var(--space-xs);
-    vertical-align: middle;
-    line-height: 1.2;
-    user-select: none;
+    line-height: 1;
+}
+
+.status-group {
+    max-width: 360px;
 }
 
 .status-text {
+    overflow: hidden;
     color: var(--color-text-muted);
     font-size: var(--font-size-sm);
-    margin-left: var(--space-md);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.app-title {
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-bold);
-    color: var(--color-primary-dark);
-    letter-spacing: 0.02em;
-    margin-right: var(--space-lg);
-    user-select: none;
+/* The File menu is positioned relative to the toolbar because the HTML keeps it
+   inside the File toolbar group. */
+.file-menu {
+    position: absolute;
+    top: calc(100% - 4px);
+    left: var(--space-lg);
+    z-index: 1100;
+    min-width: 210px;
+    padding: var(--space-xs) 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    box-shadow: 0 8px 24px var(--color-shadow-strong);
 }
 
-/* ================================
-   Workspace Layout (Sidebar + Map)
-   ================================ */
+.file-menu button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+}
+
+.file-menu button:hover,
+.file-menu button:focus {
+    background: var(--color-primary-soft);
+}
+
+/* =============================================================================
+   Workspace, sidebar and map layout
+   ============================================================================= */
+
 .workspace {
     display: grid;
     grid-template-columns: var(--sidebar-width-expanded) minmax(0, 1fr);
@@ -245,257 +248,387 @@ a {
     min-height: 0;
     width: 100%;
     overflow: hidden;
+    transition: grid-template-columns 0.2s cubic-bezier(0.77, 0, 0.18, 1);
 }
 
 .app.sidebar-collapsed .workspace {
     grid-template-columns: var(--sidebar-width-collapsed) minmax(0, 1fr);
 }
 
-/* ================================
-   Sidebar
-   ================================ */
 .sidebar {
-    background: var(--color-bg-sidebar);
-    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
-    height: 100%;
-    width: 100%;
     min-width: 0;
-    transition: width 0.2s cubic-bezier(.77, 0, .18, 1);
+    min-height: 0;
     overflow: hidden;
-    position: relative;
-    z-index: 2;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-sidebar);
 }
 
-.app.sidebar-collapsed .sidebar {
+.map-shell {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--color-surface);
+}
+
+.map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Collapsed sidebar keeps only narrow headers visible. The bodies are hidden so
+   the map receives most of the viewport without introducing a separate drawer. */
+.app.sidebar-collapsed .accordion-body {
+    display: none;
+}
+
+.app.sidebar-collapsed .accordion-header {
+    justify-content: center;
     width: var(--sidebar-width-collapsed);
-    min-width: var(--sidebar-width-collapsed);
     padding: 0;
 }
 
-.app.sidebar-expanded .sidebar {
-    width: var(--sidebar-width-expanded);
-    min-width: var(--sidebar-width-expanded);
+.app.sidebar-collapsed .accordion-title {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: var(--font-size-sm);
 }
 
-/* ================================
-   Accordion (Sidebar Sections)
-   ================================ */
+.app.sidebar-collapsed .accordion-indicator {
+    display: none;
+}
+
+/* =============================================================================
+   Accordions
+   ============================================================================= */
+
 .accordion {
+    min-width: 0;
     border-bottom: 1px solid var(--color-border);
-    background: none;
-    width: 100%;
+    background: var(--color-sidebar);
 }
 
 .accordion-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
     height: var(--accordion-header-height);
     padding: 0 var(--space-md);
-    font-weight: var(--font-weight-bold);
-    background: var(--color-bg-sidebar);
+    border: 0;
+    background: var(--color-sidebar);
     color: var(--color-text);
-    cursor: pointer;
-    user-select: none;
-    border: none;
-    outline: none;
-    transition: background 0.13s;
+    font-weight: var(--font-weight-semibold);
+    text-align: left;
 }
 
 .accordion-header:hover,
 .accordion-header:focus {
-    background: var(--color-accent);
+    background: var(--color-primary-soft);
+}
+
+.accordion-indicator {
+    color: var(--color-text-muted);
+}
+
+.accordion:not(.is-open) .accordion-indicator {
+    transform: rotate(-90deg);
 }
 
 .accordion-body {
+    min-width: 0;
     padding: var(--space-md);
-    background: var(--color-bg-alt);
-    transition: max-height 0.2s cubic-bezier(.77, 0, .18, 1), padding 0.2s;
     overflow: hidden;
+    background: var(--color-surface);
 }
 
-.accordion .is-hidden,
-.accordion-body.is-hidden {
-    max-height: 0;
-    padding: 0 var(--space-md);
-    visibility: hidden;
-    opacity: 0;
+/* Properties is fixed-height, by design. Objects then receives the remaining
+   height and scrolls internally. */
+.properties-accordion {
+    flex: 0 0 auto;
 }
 
-.accordion .is-open>.accordion-body,
-.accordion-body.is-open {
-    max-height: 1000px;
-    opacity: 1;
-    visibility: visible;
-}
-
-/* ================================
-   Properties Section (Fixed Height)
-   ================================ */
-.sidebar-properties {
-    height: var(--properties-section-height);
-    min-height: var(--properties-section-height);
-    max-height: var(--properties-section-height);
+.properties-body {
+    height: var(--properties-body-height);
     overflow: auto;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-bg-alt);
-    box-shadow: 0 1px 0 var(--color-shadow);
 }
 
-/* ================================
-   Objects Section (Flexible Height)
-   ================================ */
-.sidebar-objects {
+.objects-accordion {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.objects-body {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    background: var(--color-bg-sidebar);
-    padding-bottom: var(--space-md);
 }
 
-/* ================================
-   Map Shell & Map Area
-   ================================ */
-.map-shell {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    min-width: 0;
-    background: var(--color-bg-alt);
+.accordion-body.is-hidden {
+    display: none;
+}
+
+/* =============================================================================
+   Property forms
+   ============================================================================= */
+
+.property-form {
     display: flex;
     flex-direction: column;
-    z-index: 1;
+    gap: var(--space-md);
 }
 
-.map {
-    flex: 1 1 auto;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    min-width: 0;
-    position: relative;
-}
-
-.leaflet-container {
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0;
-    min-width: 0;
-    background: var(--color-bg-alt);
-    border-radius: var(--radius);
-}
-
-/* ================================
-   Property Form Styling
-   ================================ */
 .field {
     display: flex;
     flex-direction: column;
-    margin-bottom: var(--space-md);
+    gap: var(--space-xs);
 }
 
-.field label {
-    font-size: var(--font-size-sm);
+.field span,
+.coordinate-group legend {
     color: var(--color-text-muted);
-    margin-bottom: var(--space-xs);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
 }
 
 .field input,
 .field select,
 .field textarea {
+    width: 100%;
+    min-height: 32px;
+    padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    padding: var(--space-xs) var(--space-sm);
-    background: var(--color-bg-alt);
-    font-size: var(--font-size-base);
+    background: var(--color-surface);
     color: var(--color-text);
-    transition: border-color 0.13s;
 }
 
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
     border-color: var(--color-primary);
-}
-
-.field-error {
-    color: var(--color-danger);
-    font-size: var(--font-size-sm);
-    margin-top: var(--space-xs);
-}
-
-.danger {
-    color: var(--color-danger);
-    background: var(--color-danger-bg);
-    border-color: var(--color-danger);
+    box-shadow: 0 0 0 2px rgba(34, 99, 207, 0.14);
+    outline: none;
 }
 
 .coordinate-group {
-    display: flex;
-    gap: var(--space-sm);
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
 }
 
-/* ================================
-   Object List Styling
-   ================================ */
+.coordinate-group .field {
+    margin-top: var(--space-sm);
+}
+
+.field-error {
+    min-height: 1.2em;
+    margin: var(--space-xs) 0 0;
+    color: var(--color-danger);
+    font-size: var(--font-size-sm);
+}
+
+.danger {
+    align-self: flex-start;
+    min-height: 32px;
+    padding: 0 var(--space-md);
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+.danger:hover,
+.danger:focus {
+    background: var(--color-danger);
+    color: var(--color-text-inverse);
+}
+
+/* =============================================================================
+   Object list
+   ============================================================================= */
+
 .object-list-item {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     justify-content: center;
-    height: var(--object-list-item-height);
-    padding: 0 var(--space-md);
-    border-radius: var(--object-list-item-radius);
-    cursor: pointer;
-    background: none;
+    width: 100%;
+    min-height: 46px;
+    margin: 0 0 var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
     color: var(--color-text);
-    transition: background 0.11s, color 0.11s;
-    margin: var(--space-xs) 0;
-    position: relative;
+    text-align: left;
 }
 
 .object-list-item:hover,
 .object-list-item:focus {
-    background: var(--color-accent);
+    border-color: var(--color-border);
+    background: var(--color-primary-soft);
 }
 
-.object-list-item.is-selected,
-.object-list-item.selected {
+.object-list-item.is-selected {
+    border-color: var(--color-primary);
     background: var(--color-primary);
     color: var(--color-text-inverse);
 }
 
 .object-name {
-    font-weight: var(--font-weight-bold);
-    font-size: var(--font-size-base);
-    white-space: nowrap;
     overflow: hidden;
+    font-weight: var(--font-weight-semibold);
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .object-summary {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-    white-space: nowrap;
     overflow: hidden;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* ================================
-   Custom Leaflet Div Icons
-   ================================ */
+.object-list-item.is-selected .object-summary {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.empty-state {
+    margin: var(--space-lg) 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+/* =============================================================================
+   Critical Leaflet layout fallback
+   =============================================================================
+   This small subset mirrors the essential positioning rules from Leaflet CSS.
+   It prevents scattered tiles if a browser cache or SRI issue blocks the CDN
+   stylesheet during local development. The CDN stylesheet remains the primary
+   source of Leaflet styling.
+ */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane>svg,
+.leaflet-pane>canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.leaflet-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--color-surface);
+    touch-action: pan-x pan-y;
+}
+
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+    width: auto;
+    max-width: none !important;
+    max-height: none !important;
+    padding: 0;
+}
+
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.leaflet-tile-pane {
+    z-index: 200;
+}
+
+.leaflet-overlay-pane {
+    z-index: 400;
+}
+
+.leaflet-shadow-pane {
+    z-index: 500;
+}
+
+.leaflet-marker-pane {
+    z-index: 600;
+}
+
+.leaflet-tooltip-pane {
+    z-index: 650;
+}
+
+.leaflet-popup-pane {
+    z-index: 700;
+}
+
+.leaflet-control {
+    position: relative;
+    z-index: 800;
+    pointer-events: auto;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+    position: absolute;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.leaflet-top {
+    top: 0;
+}
+
+.leaflet-bottom {
+    bottom: 0;
+}
+
+.leaflet-left {
+    left: 0;
+}
+
+.leaflet-right {
+    right: 0;
+}
+
+.leaflet-control-container .leaflet-control {
+    pointer-events: auto;
+}
+
+/* =============================================================================
+   Custom Leaflet markers and labels
+   ============================================================================= */
+
 .bs-point-marker {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--color-primary);
-    border: 3px solid var(--color-marker-outline);
-    box-shadow: 0 1px 4px var(--color-shadow-strong);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: border-color 0.13s, box-shadow 0.13s, width 0.13s, height 0.13s;
+    border-radius: 50%;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 1px var(--color-shadow-strong), 0 2px 8px var(--color-shadow-strong);
 }
 
 .bs-point-marker-green {
@@ -510,42 +643,75 @@ a {
     background: var(--color-marker-neutral);
 }
 
-.bs-point-marker.is-selected,
-.bs-point-marker.selected {
-    width: 28px;
-    height: 28px;
+.bs-point-marker.is-selected {
     border-width: 4px;
-    border-color: var(--color-marker-outline-selected);
-    box-shadow: 0 2px 8px var(--color-shadow-strong);
-    z-index: 2;
+    box-shadow: 0 0 0 2px var(--color-primary-dark), 0 3px 10px var(--color-shadow-strong);
 }
 
 .bs-measure-label {
-    background: rgba(255, 255, 255, 0.91);
-    color: var(--color-text);
-    border-radius: var(--radius-sm);
-    box-shadow: 0 2px 6px var(--color-shadow-strong);
-    font-size: var(--font-size-sm);
     padding: 2px 7px;
-    font-weight: 500;
     border: 1px solid var(--color-border);
-    user-select: none;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 2px 6px var(--color-shadow-strong);
+    color: var(--color-text);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    line-height: 1.25;
     pointer-events: none;
+    user-select: none;
     white-space: nowrap;
-    transition: background 0.13s, border-color 0.13s, color 0.13s;
 }
 
-.bs-measure-label.is-selected,
-.bs-measure-label.selected {
+.bs-measure-label.is-selected {
+    border-color: var(--color-primary-dark);
     background: var(--color-primary);
     color: var(--color-text-inverse);
-    border-color: var(--color-primary-dark);
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-semibold);
 }
 
-/* ================================
-   Utility Classes
-   ================================ */
+/* Custom one-shot geolocation control. It is intentionally styled like a normal
+   Leaflet bar control rather than like the app toolbar. */
+.leaflet-control-locate button.locate-control-button {
+    display: block;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    background: #ffffff;
+    color: #222222;
+    font-size: 18px;
+    font-weight: var(--font-weight-semibold);
+    line-height: 30px;
+    text-align: center;
+}
+
+.leaflet-control-locate button.locate-control-button:hover,
+.leaflet-control-locate button.locate-control-button:focus {
+    background: #f4f4f4;
+    outline: none;
+}
+
+.bs-user-location-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bs-user-location-marker span {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35), 0 2px 8px var(--color-shadow-strong);
+}
+
+/* =============================================================================
+   Utilities
+   ============================================================================= */
+
 .visually-hidden {
     position: absolute !important;
     width: 1px !important;
@@ -558,117 +724,20 @@ a {
     border: 0 !important;
 }
 
-.empty-state {
-    color: var(--color-text-muted);
-    font-size: var(--font-size-lg);
-    text-align: center;
-    margin: var(--space-lg) 0;
-    padding: var(--space-lg) 0;
-    opacity: 0.7;
-}
-
 .is-hidden {
     display: none !important;
 }
 
-
-/* ================================
-   File Menu Styling
-   ================================ */
-.file-menu {
-    position: absolute;
-    left: 0;
-    top: 100%;
-    min-width: 180px;
-    background: var(--color-menu-bg);
-    border: 1px solid var(--color-menu-border);
-    border-radius: var(--radius-sm);
-    box-shadow: 0 2px 12px var(--color-shadow-strong);
-    z-index: 50;
-    margin-top: 2px;
-    padding: var(--space-xs) 0;
-    font-size: var(--font-size-base);
-}
-
-.file-menu-item {
-    padding: var(--space-sm) var(--space-lg);
-    color: var(--color-text);
-    background: none;
-    cursor: pointer;
-    border: none;
-    width: 100%;
-    text-align: left;
-    transition: background 0.13s, color 0.13s;
-    font-size: var(--font-size-base);
-}
-
-.file-menu-item:hover,
-.file-menu-item:focus {
-    background: var(--color-menu-hover);
-    color: var(--color-primary-dark);
-}
-
-/* ================================
-   Miscellaneous
-   ================================ */
 ::-webkit-scrollbar {
     width: 10px;
-    background: var(--color-bg-sidebar);
+    height: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--color-border);
     border-radius: 6px;
+    background: var(--color-border-strong);
 }
 
-/* ==========================================================================
-   User Location
-   ========================================================================== */
-
-/*
- * Custom Leaflet "Locate Me" control.
- *
- * Styled to closely match the native Leaflet zoom controls.
- */
-.leaflet-control-locate button.locate-control-button {
-    display: block;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border: 0;
-    background: #ffffff;
-    color: #222;
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 30px;
-    text-align: center;
-    cursor: pointer;
-}
-
-.leaflet-control-locate button.locate-control-button:hover {
-    background: #f4f4f4;
-}
-
-.leaflet-control-locate button.locate-control-button:focus {
-    background: #e8f1ff;
-    outline: none;
-}
-
-/*
- * Blue user-location marker.
- */
-.bs-user-location-marker {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.bs-user-location-marker span {
-    width: 14px;
-    height: 14px;
-    display: block;
-    border-radius: 50%;
-    background: #2563eb;
-    border: 3px solid #ffffff;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+::-webkit-scrollbar-track {
+    background: var(--color-sidebar);
 }

@@ -11,6 +11,9 @@
     <!-- Leaflet provides the OpenStreetMap rendering and map primitives. -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
+    <!-- Official Phosphor Icons (Regular weight). -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+
     <!-- Application-specific layout and measurement styling. -->
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -25,30 +28,49 @@
             <div class="toolbar-group file-menu-group">
                 <button id="file-menu-button" class="toolbar-button" type="button" aria-haspopup="true"
                     aria-expanded="false">
-                    File
+                    <i class="ph ph-folder-open" aria-hidden="true"></i>
                 </button>
                 <div id="file-menu" class="file-menu is-hidden" role="menu" aria-label="File menu">
-                    <button id="new-project" type="button" role="menuitem">New <span
-                            class="shortcut">Ctrl+N</span></button>
-                    <button id="open-project" type="button" role="menuitem">Open JSON <span
-                            class="shortcut">Ctrl+O</span></button>
-                    <button id="save-project" type="button" role="menuitem">Save JSON <span
-                            class="shortcut">Ctrl+S</span></button>
+                    <button id="new-project" type="button" role="menuitem">
+                        <span><i class="ph ph-file-plus" aria-hidden="true"></i> New</span>
+                        <span class="shortcut">Ctrl+N</span>
+                    </button>
+                    <button id="open-project" type="button" role="menuitem">
+                        <span><i class="ph ph-folder-open" aria-hidden="true"></i> Open
+                            JSON</span>
+                        <span class="shortcut">Ctrl+O</span>
+                    </button>
+                    <button id="save-project" type="button" role="menuitem">
+                        <span><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save
+                            JSON</span>
+                        <span class="shortcut">Ctrl+S</span>
+                    </button>
                 </div>
                 <input id="open-file-input" class="visually-hidden" type="file" accept="application/json,.json">
             </div>
 
             <div class="toolbar-group">
-                <button id="sidebar-toggle" class="toolbar-button" type="button">Collapse Sidebar</button>
+                <button id="sidebar-toggle" class="toolbar-button" type="button" title="Collapse or expand sidebar">
+                    <i class="ph ph-sidebar-simple" aria-hidden="true"></i>
+                </button>
             </div>
 
             <nav class="toolbar-group mode-group" aria-label="Drawing modes">
-                <button id="mode-select" class="toolbar-button" type="button">Select <span
-                        class="shortcut">Esc</span></button>
-                <button id="mode-line" class="toolbar-button" type="button">Measure Line <span
-                        class="shortcut">L</span></button>
-                <button id="mode-circle" class="toolbar-button" type="button">Draw Circle <span
-                        class="shortcut">C</span></button>
+                <button id="mode-select" class="toolbar-button" type="button">
+                    <i class="ph ph-cursor" aria-hidden="true"></i>
+                    <span>Select</span>
+                    <span class="shortcut">Esc</span>
+                </button>
+                <button id="mode-line" class="toolbar-button" type="button">
+                    <i class="ph ph-ruler" aria-hidden="true"></i>
+                    <span>Measure Line</span>
+                    <span class="shortcut">L</span>
+                </button>
+                <button id="mode-circle" class="toolbar-button" type="button">
+                    <i class="ph ph-circle" aria-hidden="true"></i>
+                    <span>Draw Circle</span>
+                    <span class="shortcut">C</span>
+                </button>
             </nav>
 
             <label class="toolbar-group units-group" for="units-select">
@@ -69,7 +91,10 @@
             </div>
 
             <div class="toolbar-group">
-                <button id="fullscreen-toggle" class="toolbar-button" type="button">Fullscreen</button>
+                <button id="fullscreen-toggle" class="toolbar-button" type="button" title="Toggle fullscreen">
+                    <i class="ph ph-corners-out" aria-hidden="true"></i>
+                    <span>Fullscreen</span>
+                </button>
             </div>
         </header>
 
