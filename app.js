@@ -4,9 +4,7 @@
  * bs-triangulate
  *
  * A small Leaflet/OpenStreetMap browser app for range/bearing and circle-based
- * triangulation. This file deliberately avoids build tooling, classes and
- * external drawing plugins. The project model is the source of truth; Leaflet
- * layers are treated as a render target.
+ * triangulation. This file deliberately avoids build tooling and classes. Leaflet.Geodesic is used as a rendering plugin while the project model remains the source of truth; Leaflet layers are treated as a render target.
  */
 
 // =============================================================================
@@ -1033,7 +1031,7 @@ function updateLinePreview(latlng) {
     const points = [pointToLatLng(drawState.start), latlng];
 
     if (!drawState.previewLayer) {
-        drawState.previewLayer = L.polyline(points, getLineStyle(false, true)).addTo(map);
+        drawState.previewLayer = new L.Geodesic(points, getLineStyle(false, true)).addTo(map);
     } else {
         drawState.previewLayer.setLatLngs(points);
     }
@@ -1095,7 +1093,7 @@ function createLineLayerBundle(line) {
     const startLatLng = pointToLatLng(line.start);
     const endLatLng = pointToLatLng(line.end);
 
-    const polyline = L.polyline([startLatLng, endLatLng], getLineStyle(false, false)).addTo(map);
+    const polyline = new L.Geodesic([startLatLng, endLatLng], getLineStyle(false, false)).addTo(map);
     const startMarker = createPointMarker(startLatLng, 'green', true).addTo(map);
     const endMarker = createPointMarker(endLatLng, 'red', true).addTo(map);
     const label = L.marker(getLineMidpointLatLng(line), {

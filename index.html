@@ -130,6 +130,8 @@
 
     <!-- Leaflet must load before app.js because the app uses the global L object. -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet.Geodesic must load before app.js for the reasons stated above, but after Leaflet as Leaflet is a dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.geodesic@2.7.2/dist/leaflet.geodesic.umd.min.js"></script>
     <script src="app.js"></script>
 </body>
 
